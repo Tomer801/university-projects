@@ -1,0 +1,264 @@
+/** 
+ * A class that manages memory allocation and direct access to a simulated RAM.
+ * It uses a free list to keep track of blocks that can be allocated and freed.
+ * The RAM is limited to 32,768 words in this environment.
+ */
+class Memory {
+    /** Global references to memory arrays and constants used in this class. */
+    static Array ram;         // Represents the entire RAM
+    static Array freeList;    // Points to the start of the free memory list
+    static Array MEMORY_END;  // Symbolic end of memory address space
+
+    static int LIST_LENGTH;   // Index offset for storing length in free-list blocks
+    static int NEXT_BLOCK;    // Index offset for the "next" block pointer in the list
+    static int ALLOC_SIZE;    // Index offset for allocated block size
+
+    /** 
+     * Initializes the Memory class. Sets up the free list so that
+     * the entire heap region is initially available.
+     */
+    function void init() {
+        // The free list starts at address 2048 and runs up to 16384.
+        // We mark the first free block as 14336 words in size (i.e., 16384-2048).
+        // The free block has no subsequent block, so we link it to null.
+        let ram = 0;
+        let freeList = 2048;
+        let MEMORY_END = 16384;
+        let LIST_LENGTH = 0;
+        let NEXT_BLOCK = 1;
+        let ALLOC_SIZE = -1;
+        let freeList[0] = 14336; // Record the length of the free segment
+        let freeList[1] = null;  // No further blocks
+        return;
+    }
+
+    /** 
+     * Reads a 16-bit value from the RAM at the specified address.
+     * @param address The RAM address to read from.
+     * @return The value stored at the given address.
+     */
+    function int peek(int address) {
+        return ram[address];
+    }
+
+    /** 
+     * Writes a 16-bit value to the RAM at the specified address.
+     * @param address The RAM address to write to.
+     * @param value   The value to store at that address.
+     */
+    function void poke(int address, int value) {
+        // NOTE: Currently, this line is incomplete in the original code. 
+        //       There's no actual assignment after the equals sign.
+        let ram[address] = value;
+        return;
+    }
+
+    /**
+     * Reserves a block of memory large enough to hold 'size' words.
+     * Uses the freeList to find a suitable block (best-fit or first-fit),
+     * and returns the base address of that allocated block on success.
+     * If there's no space, returns -1.
+     *
+     * @param size The number of words needed.
+     * @return The starting address of the allocated memory (or -1 if none).
+     */
+    function int alloc(int size) {
+        var Array prev_block;
+        var Array found_block;
+
+        // We look for a block that can hold 'size' words by calling best_fit().
+        let prev_block = Memory.best_fit(size);
+
+        // If best_fit() returns MEMORY_END, it means no suitable free block was found.
+        if (prev_block = MEMORY_END) {
+            let found_block = null; 
+        } else {
+            // If prev_block is null, the best block is at the start of the freeList.
+            if (prev_block = null) {
+                let found_block = freeList;
+                // Once the block is allocated, the free list's first element might change.
+                let freeList = Memory.do_alloc(found_block, size);
+            } else {
+                // Otherwise, we allocate from the block that follows 'prev_block'.
+                let found_block = prev_block[NEXT_BLOCK];
+                let prev_block[NEXT_BLOCK] = Memory.do_alloc(found_block, size);
+            }
+        }
+        // The allocated block is returned plus one, 
+        // so it skips over the header cell used to store the block size.
+        return found_block + 1;
+    }
+
+    /**
+     * Takes a free block that best_fit() identified, carves out the requested
+     * 'size' words, then updates the free-list so that the remaining part
+     * of the block (if any) is still tracked. Returns the pointer to the
+     * next free block (or null if none).
+     *
+     * @param found_block The block in which we will allocate 'size' words.
+     * @param size        The number of words requested by alloc().
+     * @return A pointer to the next free block after allocation.
+     */
+    function Array do_alloc(Array found_block, int size) {
+        var Array next_block;
+        var int block_size;
+
+        // If the block is big enough to hold the requested size plus some leftover space:
+        if (found_block[LIST_LENGTH] > (size + 1 + 2)) {
+            // Carve out the requested segment, leaving room for a new free block header.
+            let next_block = found_block + size + 1;
+            let next_block[NEXT_BLOCK] = found_block[NEXT_BLOCK];
+            let next_block[LIST_LENGTH] = found_block[LIST_LENGTH] - (next_block - found_block);
+
+            // Move 'found_block' pointer to skip the allocation header 
+            // (the first word of the block stores the allocated size).
+            let found_block = found_block + 1;
+            let found_block[ALLOC_SIZE] = size + 1; // The size includes the header for the allocation
+        } else {
+            // If the block is just large enough or slightly larger, we allocate the entire block.
+            let next_block = found_block[NEXT_BLOCK];
+            let block_size = found_block[LIST_LENGTH];
+            let found_block = found_block + 1;
+            let found_block[ALLOC_SIZE] = block_size;
+        }
+
+        return next_block;
+    }
+
+    /**
+     * Frees the memory block that starts at the given array pointer,
+     * making it available again for future allocations. Merges adjacent
+     * free blocks if possible.
+     *
+     * @param o The array pointer (base address + 1) to be deallocated.
+     */
+    function void deAlloc(Array o) {
+        var int alloc_size;
+        var Array prev_block;
+        var Array next_block;
+
+        // Read the size that was stored just before 'o'.
+        let alloc_size = o[ALLOC_SIZE];
+        // Move 'o' so that it points to the block header (the very start).
+        let o = o - 1; 
+
+        // Find the free block that comes immediately before 'o' in memory (if any).
+        let prev_block = Memory.find_prev_free(o);
+
+        // If there's no previous free block, 'o' becomes the new head of the freeList.
+        if (prev_block = null) {
+            let o[LIST_LENGTH] = alloc_size;
+            let o[NEXT_BLOCK] = freeList;
+            let freeList = o;
+            let prev_block = o;
+        } else {
+            // Check if we can merge 'o' with the end of the 'prev_block' block.
+            if ((prev_block + prev_block[LIST_LENGTH]) = o) {
+                // Add this block's size onto the previous free block.
+                let prev_block[LIST_LENGTH] = prev_block[LIST_LENGTH] + alloc_size;
+            } else {
+                // Otherwise, we set this block as a new link in the chain.
+                let o[LIST_LENGTH] = alloc_size;
+                let o[NEXT_BLOCK] = prev_block[NEXT_BLOCK];
+                let prev_block[NEXT_BLOCK] = o;
+                let prev_block = o;
+            }
+        }
+
+        // Check if 'prev_block' can be merged with the free block after it.
+        if ((prev_block + prev_block[LIST_LENGTH]) = prev_block[NEXT_BLOCK]) {
+            let next_block = prev_block[NEXT_BLOCK];
+            let prev_block[LIST_LENGTH] = prev_block[LIST_LENGTH] + next_block[LIST_LENGTH];
+            let prev_block[NEXT_BLOCK] = next_block[NEXT_BLOCK];
+        }
+        return;
+    }
+
+    /**
+     * Returns the maximum value in the given array. Depends on how the
+     * array was allocated, since the block size is stored before the
+     * array pointer. Not yet implemented.
+     */
+    function int max(Array o) {
+        // Implementation detail: you can use the stored size prior to o
+        // to know how many elements to scan. 
+        var int length;
+        var int i;
+        var int maximum;
+        
+        // Retrieve the number of actual elements stored in this array
+        let length = o[ALLOC_SIZE] - 1;
+
+        // Start by assuming the first element is the largest
+        let maximum = o[0];
+        let i = 1;
+
+        // Scan through all the elements to find the maximum
+        while (i < length) {
+            if (o[i] > maximum) {
+                let maximum = o[i];
+            }
+            let i = i + 1;
+        }
+
+        return maximum;
+    }
+
+    /**
+     * Locates the free block in the list that comes right before the given address.
+     * Returns null if none is found (meaning 'o' should become the new head).
+     *
+     * @param o The memory address for which we want the predecessor in the freeList.
+     * @return The block that appears just before 'o', or null if 'o' belongs at the start.
+     */
+    function Array find_prev_free(Array o) {
+        var Array block;
+
+        // If the first free block is already beyond 'o', no predecessor exists.
+        if (freeList > o) {
+            return null;
+        }
+
+        let block = freeList;
+        // Move forward until the next block is null or surpasses 'o'.
+        while (~(block[NEXT_BLOCK] = null) & (block[NEXT_BLOCK] < o)) {
+            let block = block[NEXT_BLOCK];
+        }
+        return block;
+    }
+
+    /**
+     * Selects a suitable free block that can fit 'size' words.
+     * Returns the block that appears immediately before the best-fitting free block.
+     * If no suitable block is found, returns MEMORY_END as a special flag.
+     *
+     * @param size The requested size in words for the new block.
+     * @return A pointer to the block preceding the best fit, or MEMORY_END if none is found.
+     */
+    function Array best_fit(int size) {
+        var Array best_block;
+        var Array prev_block;
+        var Array cur_block;
+        var int best_size;
+        var int cur_size;
+
+        let best_block = MEMORY_END;
+        let best_size = 14336; // The initial maximum size used for comparison
+        let cur_block = freeList;
+        let prev_block = null;
+
+        // Traverse the freeList to find the smallest block that still fits 'size'.
+        while (~(cur_block = null)) {
+            let cur_size = cur_block[LIST_LENGTH] - 1; 
+            if (~(cur_size < size) & (cur_size < best_size)) {
+                let best_block = prev_block;
+                let best_size = cur_size;
+            }
+            let prev_block = cur_block;
+            let cur_block = cur_block[NEXT_BLOCK];
+        }
+
+        return best_block; 
+    }
+
+}
