@@ -35,4 +35,3 @@ Each sub-folder contains its own specific `README.md` with:
 
 
 ---
-**Contact**: [Your Name] – [Your Email/LinkedIn]
