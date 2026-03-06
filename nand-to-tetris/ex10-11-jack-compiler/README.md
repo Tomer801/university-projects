@@ -1,44 +1,42 @@
-# Jack Compiler – Nand2Tetris Project
+# Jack Language Compiler — Recursive Descent
 
-A Python implementation of the **Jack Compiler**, part of the [Nand2Tetris](https://www.nand2tetris.org) course.  
-This compiler translates Jack high-level programs (`.jack`) into VM code (`.vm`) for the Hack platform.
-
----
-
-## Files
-- **JackCompiler.py / JackCompiler** – Entry point for compilation. Accepts a single `.jack` file or a directory and compiles it into `.vm` files.  
-- **JackTokenizer.py** – Tokenizes Jack source code into keywords, symbols, identifiers, integer constants, and string constants. Removes whitespace/comments.【285†source】  
-- **CompilationEngine.py** – Recursive descent parser. Compiles classes, variables, subroutines, statements, expressions, and terms, outputting VM commands.【287†source】  
-- **SymbolTable.py** – Maintains symbol tables for class-level and subroutine-level scopes, mapping identifiers to type, kind, and index.  
-- **VMWriter.py** – Encapsulates VM command writing (push/pop, arithmetic, label, goto, if-goto, call, function, return).【286†source】  
-- **Makefile** – Build automation for running the compiler on test programs.  
-- **AUTHORS** – Project authorship info.
+A Python compiler for the Jack object-oriented language that performs lexical analysis, recursive-descent parsing, two-scope symbol resolution, and on-the-fly VM code emission — translating `.jack` source files directly into Hack VM bytecode (`.vm`).
 
 ---
 
-## Features
-- **Tokenizer**: strips comments, splits code into valid Jack tokens.【285†source】  
-- **Compilation Engine**: compiles according to Jack grammar rules (class, varDec, subroutineDec, statements, expressions). Emits VM code with correct function calls, branching, and memory access.【287†source】  
-- **Symbol Table**: supports defining static, field, argument, and local variables with unique indices.  
-- **VM Writer**: produces valid VM commands for arithmetic, memory segments, program flow, function calls, and return.【286†source】  
-- **Two-level scope management**: class scope (static/field) and subroutine scope (arg/var).  
+## Problem Solved
+
+Implement a complete single-pass compiler pipeline: tokenise Jack source text, parse it according to the Jack grammar using recursive descent, resolve identifiers through a two-scope symbol table (class-level + subroutine-level), and emit equivalent stack-based VM code without constructing an intermediate AST.
 
 ---
 
-## Build & Run
-Run with Python 3.8+:
+## Technical Highlights
 
-```bash
-python3 JackCompiler.py <input.jack | directory>
+| Challenge | How It Was Addressed |
+|---|---|
+| Lexical analysis | `JackTokenizer` strips comments/whitespace and classifies each token as keyword, symbol, identifier, integer constant, or string constant |
+| Recursive descent parsing | `CompilationEngine` has one method per grammar production (`compileClass`, `compileSubroutine`, `compileStatements`, etc.); each consumes tokens and emits code directly |
+| Two-scope symbol table | `SymbolTable` maintains class-level (`static`, `field`) and subroutine-level (`arg`, `var`) scopes independently; `startSubroutine()` resets the inner scope without touching the class scope |
+| Constructor/method/function dispatch | Constructors allocate heap via `Memory.alloc(nFields)`; methods push `this` as argument 0 via `pointer 0`; functions have no implicit object |
+| No AST required | `VMWriter` emits VM commands as the parser traverses the source — code generation and parsing are interleaved in a single pass |
+
+---
+
+## Compilation Pipeline
+
 ```
-
-If a directory is provided, all `.jack` files inside are compiled into `.vm` files with the same basename.  
+.jack source
+  → JackTokenizer        — lexical analysis, token classification
+  → CompilationEngine    — recursive descent, drives all components
+       ├─ SymbolTable    — class-scope + subroutine-scope symbol resolution
+       └─ VMWriter       — push/pop, arithmetic, labels, calls, function, return
+  → .vm output
+```
 
 ---
 
 ## Example
 
-Input (`Main.jack`):
 ```jack
 class Main {
     function void main() {
@@ -48,23 +46,21 @@ class Main {
 }
 ```
 
-Output (`Main.vm`):
-```
-function Main.main 0
-push constant 12
-call String.new 1
-push constant 72
-call String.appendChar 2
-push constant 101
-call String.appendChar 2
-...
-call Output.printString 1
-pop temp 0
-push constant 0
-return
-```
+Compiles to VM code that calls `String.new`, populates the string with individual character codes via `String.appendChar`, calls `Output.printString`, then returns.
 
 ---
 
-## License
-This project follows the [CC BY-NC-SA 3.0 License](https://creativecommons.org/licenses/by-nc-sa/3.0/) as required by the Nand2Tetris course materials.
+## Tech Stack & Concepts
+
+- **Language:** Python 3
+- **Build:** `make` or `python3 JackCompiler.py <File.jack | directory>`
+- **Key concepts:** Lexical analysis, recursive descent parsing, two-scope symbol tables, single-pass code generation, OOP compilation
+
+---
+
+## Run
+
+```bash
+python3 JackCompiler.py MyClass.jack       # produces MyClass.vm
+python3 JackCompiler.py ProjectDirectory/  # compiles all .jack files in directory
+```

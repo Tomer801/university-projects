@@ -1,81 +1,60 @@
-# VM Translator – Nand2Tetris Project
+# Stack-Based VM Translator
 
-A Python implementation of the **VM Translator**, part of the [Nand2Tetris](https://www.nand2tetris.org) course.  
-This translator converts **Virtual Machine (VM)** language programs (`.vm`) into Hack assembly (`.asm`).
-
----
-
-## Files
-- **Parser.py** – Parses `.vm` files, strips whitespace/comments, and exposes command type + arguments (arithmetic, push/pop, branching, functions).【256†source】
-- **CodeWriter.py** – Translates VM commands into Hack assembly. Implements arithmetic, memory access, branching, function calls, bootstrap initialization.【257†source】
-- **Main.py** – Entry point for translation. Handles input file/directory, iterates `.vm` files, applies parser + code writer, and produces `.asm` output.【255†source】
-- **VMtranslator** – Script wrapper for running translator easily.【255†source】
-- **Makefile** – Build automation for running translator on test files.
-- **AUTHORS** – Project authorship info.
+A Python VM translator that compiles Hack Virtual Machine (VM) stack-based bytecode (`.vm`) into Hack assembly (`.asm`), implementing arithmetic, memory access, branching, and function-call semantics.
 
 ---
 
-## Features
-- **Arithmetic commands**: add, sub, neg, eq, gt, lt, and, or, not, shiftleft, shiftright.【257†source】
-- **Memory access**: push/pop to segments (constant, local, argument, this, that, temp, pointer, static).【257†source】
-- **Branching**: label, goto, if-goto (function-scoped labels).【257†source】
-- **Functions & calls**: function, call, return with full frame handling.【257†source】
-- **Bootstrap code**: initializes stack pointer to 256 and calls `Sys.init`.【257†source】
-- **Two-phase file handling**: can process one `.vm` file or an entire directory of `.vm` files into a single `.asm` output.【255†source】
+## Problem Solved
+
+Implement the full VM-to-assembly compilation layer for the Hack platform: translate all five VM command categories while correctly managing the runtime stack, memory segments, and the function-call/return protocol.
 
 ---
 
-## Build & Run
-Run with Python 3.8+:
+## Technical Highlights
 
-```bash
-python3 Main.py <input.vm | directory>
-```
+| Challenge | How It Was Addressed |
+|---|---|
+| Stack arithmetic | Each command pops operand(s), applies the operation in registers, pushes result; comparison commands (`eq`, `gt`, `lt`) use conditional jumps with unique auto-generated labels |
+| Memory segment addressing | `local/argument/this/that` use indirect addressing via base-pointer registers; `temp/pointer` use fixed RAM offsets (R5–R12, R3–R4); `static` uses file-scoped named variables; `constant` pushes an immediate |
+| Function call protocol | `call` saves five caller-frame fields on the stack and repositions ARG/LCL; `return` restores the frame from the saved data and jumps to the return address |
+| Multi-file translation | Accepts a directory of `.vm` files and produces one merged `.asm` output; each file's static variables are namespaced by filename |
+| Bootstrap | Emits `SP=256` and `call Sys.init` before the first translated instruction |
 
-or using the `VMtranslator` script:
+---
 
-```bash
-python3 VMtranslator <input.vm | directory>
-```
+## VM Command Reference
 
-If a directory is given, all `.vm` files inside are translated into one `<dirname>.asm` file.【255†source】
+| Category | Commands |
+|---|---|
+| Arithmetic/Logic | `add`, `sub`, `neg`, `eq`, `gt`, `lt`, `and`, `or`, `not`, `shiftleft`, `shiftright` |
+| Memory Access | `push`/`pop` — `constant`, `local`, `argument`, `this`, `that`, `temp`, `pointer`, `static` |
+| Branching | `label`, `goto`, `if-goto` |
+| Functions | `function`, `call`, `return` |
 
 ---
 
 ## Example
 
-Input (`SimpleAdd.vm`):
 ```
 push constant 7
 push constant 8
 add
 ```
-
-Output (`SimpleAdd.asm`):
-```
-@7
-D=A
-@SP
-A=M
-M=D
-@SP
-M=M+1
-@8
-D=A
-@SP
-A=M
-M=D
-@SP
-M=M+1
-@SP
-AM=M-1
-D=M
-@SP
-A=M-1
-M=D+M
-```
+compiles to push 7 and 8 onto the Hack stack, then pop both into registers, add them, and push the result.
 
 ---
 
-## License
-This project follows the [CC BY-NC-SA 3.0 License](https://creativecommons.org/licenses/by-nc-sa/3.0/) as required by the Nand2Tetris course materials.
+## Tech Stack & Concepts
+
+- **Language:** Python 3
+- **Build:** `make` or `python3 Main.py <file.vm | directory>`
+- **Key concepts:** Stack machine, memory segmentation, function-call protocol, code generation, assembly
+
+---
+
+## Run
+
+```bash
+python3 Main.py Program.vm          # single file → Program.asm
+python3 Main.py ProgramDirectory/   # directory  → ProgramDirectory.asm
+```

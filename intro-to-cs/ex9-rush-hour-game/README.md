@@ -1,108 +1,68 @@
-# Intro2CS Exercise 9 – Rush Hour Game
+# Rush Hour Sliding Puzzle
 
-Python implementation of the classic **Rush Hour** puzzle.  
-The game is built using three main classes: `Car`, `Board`, and `Game`.  
-Cars are placed on a 7×7 board with a single exit at cell `(3,7)`. The goal is to move the red car (`R`) to the exit.
+A full OOP implementation of the classic Rush Hour board game in Python. Cars slide along a 7×7 grid; the objective is to move the red car (`R`) to the exit at `(3,7)`.
 
 ---
 
-## Files
-- **`car.py`** – defines the `Car` class, representing a car on the board.
-- **`board.py`** – defines the `Board` class, representing the game board.
-- **`game.py`** – defines the `Game` class, manages user interaction and gameplay.
+## Problem Solved
+
+Model the complete Rush Hour game rules in three clean, decoupled classes — `Car`, `Board`, and `Game` — with JSON-driven configuration, move validation, legal-move generation, and win/loss detection.
 
 ---
 
-## Features
-- **Car class**:
-  - Stores car name, length, head location, orientation.
-  - Provides possible moves (`u`, `d`, `l`, `r`) depending on orientation.
-  - Returns required empty cells for a move.
-  - Updates its location when moved.
-- **Board class**:
-  - Maintains a 7×7 board plus exit `(3,7)`.
-  - Tracks car positions and validates moves.
-  - Adds cars only if placement is legal (inside board & not overlapping).
-  - Generates all possible moves for all cars.
-  - Executes valid car moves and updates board state.
-- **Game class**:
-  - Loads initial board configuration from a JSON file.
-  - Handles the game loop, user input, and victory condition.
-  - User can type `!` to quit at any time.
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Orientation-aware movement | `Car` stores orientation (horizontal=1, vertical=0); `possible_moves()` returns only the valid direction keys for that orientation |
+| Collision detection | `movement_requirements(move_key)` returns the cells the car needs empty before it can move; `Board` checks each against current occupancy |
+| Encapsulated board state | `Board` maintains a dict mapping cell coordinates → car names; `add_car()` atomically validates and registers all cells a car occupies |
+| Decoupled game loop | `Game` loads config and constructs objects, then drives the loop — UI logic is fully separated from model logic |
+| JSON configuration | Car definitions loaded from a file: `{"R": [length, [row, col], orientation], ...}` |
 
 ---
 
-## Requirements
-- Python 3.8+
-- A valid **JSON configuration file** with car definitions:
-  ```json
-  {
-    "R": [2, [3, 0], 1],
-    "O": [3, [0, 4], 0]
-  }
-  ```
-  Format per car: `[length, [row, col], orientation]`  
-  - `length` ∈ {2,3,4}  
-  - `orientation` = 0 (vertical), 1 (horizontal)  
-  - `row, col` = head position
+## Class Overview
+
+```
+Car
+├── car_coordinates()          → list of occupied cells
+├── possible_moves()           → dict of {direction: description}
+├── movement_requirements(key) → cells that must be free
+└── move(key)                  → update head position in-place
+
+Board  (7×7 grid + exit at (3,7))
+├── add_car(car)               → validate and place car
+├── possible_moves()           → all legal (car_name, direction) pairs
+├── move_car(name, direction)  → execute move and update state
+└── cell_content(coord)        → car name at coord, or None
+
+Game
+├── create_game(config)        → parse JSON, populate board
+└── play()                     → game loop with win/quit detection
+```
 
 ---
 
-## Usage
-Run from the command line:
+## Tech Stack & Concepts
+
+- **Language:** Python 3
+- **Key concepts:** OOP design, state machines, move validation, JSON parsing, game loop architecture
+
+---
+
+## Run
+
 ```bash
 python3 game.py car_config.json
 ```
 
-### Example game loop
-```
-[_ ,_ ,_ ,_ ,_ ,_ ,_ ,#]
-...
-[R ,R ,_ ,_ ,_ ,_ ,_ ,E]
-
-input (car name , direction) in this format:
-R,r
+**JSON config example:**
+```json
+{
+  "R": [2, [3, 0], 1],
+  "O": [3, [0, 4], 0]
+}
 ```
 
-- Valid directions:
-  - `u` = up
-  - `d` = down
-  - `l` = left
-  - `r` = right
-- Type `!` to quit.
-
-Game ends when:
-- The red car (`R`) reaches the exit `(3,7)`.
-- No legal moves remain.
-- User quits.
-
----
-
-## Key Classes and Methods
-- **Car**
-  - `car_coordinates()`
-  - `possible_moves()`
-  - `movement_requirements(move_key)`
-  - `move(move_key)`
-- **Board**
-  - `cell_list()`
-  - `cell_content(coord)`
-  - `add_car(car)`
-  - `possible_moves()`
-  - `move_car(name, move_key)`
-- **Game**
-  - `play()`
-  - `__single_turn()`
-  - `create_game(config)`
-
----
-
-## Limitations
-- JSON file must be well-formed; invalid cars are skipped silently.
-- Only standard input/output supported (no GUI).
-- Assumes cars have unique names.
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.
+Input during play: `<CarName>,<direction>` (e.g., `R,r`). Type `!` to quit.

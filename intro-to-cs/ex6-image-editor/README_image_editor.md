@@ -1,39 +1,58 @@
-# Image Editor (Intro2CS Ex6)
+# Image Processing Pipeline
 
-A simple Python program for basic image processing operations.  
-The program loads an image, allows the user to choose editing operations from a menu, and saves the result.
-
----
-
-## Features
-- **RGB to Grayscale** conversion.
-- **Blurring** images with a customizable kernel size.
-- **Resizing** images using bilinear interpolation.
-- **Rotation** by 90° left or right.
-- **Edge detection** using adaptive thresholding.
-- **Quantization** into N levels (both grayscale and RGB).
-- **Display** the image at any point.
-- **Save** the final image to a file.
+A Python image editor implementing six fundamental image processing operations from first principles — no OpenCV or PIL for the core algorithms.
 
 ---
 
-## Requirements
-- Python 3.8+
-- `ex6_helper.py` module (provided in the course), which must support:
-  - `load_image(path)` – load image into nested list representation.
-  - `save_image(image, path)` – save image to file.
-  - `show_image(image)` – display image in a window.
+## Problem Solved
+
+Build an interactive image processing tool that applies grayscale conversion, blurring, resizing, rotation, edge detection, and colour quantization using manual implementations of the underlying mathematics, not library wrappers.
 
 ---
 
-## Usage
-Run from the command line:
+## Technical Highlights
+
+| Operation | Implementation |
+|---|---|
+| RGB → Grayscale | Luminance-weighted formula: `0.299R + 0.587G + 0.114B` applied per pixel |
+| Blur | Discrete 2D convolution with an n×n averaging kernel (`apply_kernel`); handles boundary pixels |
+| Resize | Bilinear interpolation — computes each output pixel from the four surrounding input pixels, weighted by sub-pixel distance |
+| Rotate 90° | Transposes the pixel matrix and reverses row or column order depending on direction |
+| Edge Detection | Adaptive thresholding: each pixel is compared against the mean of a local block; outputs a binary image |
+| Quantization | Maps continuous intensity range to N uniform buckets; applied per channel for colour images |
+
+---
+
+## Architecture
+
+```
+image_editor.py
+├── separate_channels / combine_channels  — RGB channel management
+├── RGB2grayscale                         — luminance conversion
+├── blur_kernel / apply_kernel            — convolution engine
+├── bilinear_interpolation / resize       — smooth scaling
+├── rotate_90                             — affine rotation
+├── get_edges                             — adaptive edge detector
+├── quantize / quantize_colored_image     — colour reduction
+└── main_loop                             — interactive menu
+```
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Python 3
+- **Key concepts:** 2D convolution, bilinear interpolation, adaptive thresholding, colour quantization, channel manipulation
+
+---
+
+## Run
+
 ```bash
 python3 image_editor.py input_image.jpg
 ```
 
-The program opens an interactive menu:
-
+Interactive menu:
 ```
 1. Convert RGB to grayscale
 2. Blur image
@@ -42,51 +61,5 @@ The program opens an interactive menu:
 5. Get edges
 6. Quantize image
 7. Show image
-8. Quit program
+8. Quit
 ```
-
-Enter the number corresponding to the desired operation.  
-Each option may ask for additional parameters (e.g., kernel size, resize dimensions, etc.).
-
----
-
-## Example
-```
-$ python3 image_editor.py flower.jpg
-1.Convert RGB to grayscale
-2.blur image
-3.resize image
-4.rotate image 90 deg
-5.get edges
-6.quantize image
-7.show image
-8.quit program
-choose: 1
-```
-
----
-
-## Key Functions
-- `separate_channels(image)` – split RGB channels.
-- `combine_channels(channels)` – merge RGB channels.
-- `RGB2grayscale(image)` – convert to grayscale.
-- `blur_kernel(size)` – create kernel for blurring.
-- `apply_kernel(image, kernel)` – apply convolution.
-- `bilinear_interpolation(image, y, x)` – helper for resizing.
-- `resize(image, h, w)` – resize image.
-- `rotate_90(image, direction)` – rotate 90° left/right.
-- `get_edges(image, blur_size, block_size, c)` – detect edges.
-- `quantize(image, N)` – quantize grayscale.
-- `quantize_colored_image(image, N)` – quantize RGB image.
-
----
-
-## Limitations
-- Edge detection requires odd kernel sizes.
-- Quantization requires `N > 1`.
-- Only works with the helper module API provided in the assignment.
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.

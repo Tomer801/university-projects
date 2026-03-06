@@ -1,75 +1,52 @@
-# Tic-Tac-Toe Tournament – Java Project
+# TicTacToe Tournament Framework
 
-Java implementation of a flexible **Tic-Tac-Toe (Noughts and Crosses)** game and tournament framework.  
-Supports different player types, renderers, and repeated matches.
-
----
-
-## Files
-- **Main.java** – Entry point. Parses command-line arguments, builds players and renderers using factories, and launches a game or tournament.  
-- **Board.java** – Represents the 3×3 game board. Tracks cell marks, validates moves, checks win/draw conditions.  
-- **Mark.java** – Enum-like class for marks (`X`, `O`, `BLANK`).  
-- **Game.java** – Runs a single match between two players on a board with a renderer. Handles turn-taking and win/draw detection.  
-- **Player.java** – Abstract base class for players. Subclasses must implement `playTurn(Board)` to choose moves.  
-- **PlayerFactory.java** – Factory to create players from string names/arguments. Supports human players, random players, etc.  
-- **Tournament.java** – Runs multiple games between players in a round-robin or sequential format. Collects results.  
-- **Renderer.java** – Interface for board renderers.  
-- **RendererFactory.java** – Factory to create renderers (console, void/silent, etc.).  
-- **VoidRenderer.java** – No-op renderer (used for silent tournaments).  
+An extensible Java game framework supporting single matches and multi-player tournament scheduling for Tic-Tac-Toe, with pluggable player types and rendering strategies.
 
 ---
 
-## Features
-- Play a single interactive Tic-Tac-Toe game.  
-- Run a tournament between multiple players.  
-- Extendable player types (AI, human, random, etc.).  
-- Different rendering strategies (console output, silent).  
-- Modular factories for easy expansion.  
+## Problem Solved
+
+Design a game framework that is open to extension — new AI strategies, player types, and renderers can be added without modifying existing code — while keeping the game, tournament, and UI layers cleanly decoupled.
 
 ---
 
-## Build
-Compile with `javac`:
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Extensible player types | `Player` is an abstract base class; subclasses implement `playTurn(Board)` only — tournament and game logic never depend on concrete types |
+| Open/closed player creation | `PlayerFactory` maps string names to player instances, so new player types register in one place without touching `Main` or `Tournament` |
+| Renderer decoupling | `Renderer` interface allows both `ConsoleRenderer` (interactive) and `VoidRenderer` (silent tournament mode) to be swapped at runtime via `RendererFactory` |
+| Win/draw detection | `Board` checks rows, columns, and both diagonals after each move; returns the winning mark or `BLANK` for a draw |
+| Tournament result aggregation | `Tournament` runs n games and accumulates a win-count map; results are printed as a formatted leaderboard |
+
+---
+
+## Design Patterns
+
+| Pattern | Where Applied |
+|---|---|
+| Abstract class / Polymorphism | `Player` abstract base; `HumanPlayer`, `RandomPlayer`, `CleverPlayer`, `GeniusPlayer` subclasses |
+| Factory Method | `PlayerFactory`, `RendererFactory` — centralised object creation from string arguments |
+| Strategy | Different `Renderer` implementations injected at runtime |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Java (SE)
+- **Key concepts:** OOP design, abstract classes, factory pattern, strategy pattern, polymorphism, game loop architecture
+
+---
+
+## Build & Run
+
 ```bash
 javac *.java
-```
 
----
-
-## Usage
-Run with `java`:
-
-```bash
-java Main <renderer> <player1> <player2> [player3 ...]
-```
-
-- `<renderer>`: one of `console`, `void`.  
-- `<playerX>`: player type (e.g., `human`, `random`).  
-
-### Example
-```bash
+# Single game (human vs random, console rendering)
 java Main console human random
-```
 
-Plays one game: human vs random, board shown in console.
-
-```bash
+# Silent tournament (three random players)
 java Main void random random random
 ```
-
-Runs a silent tournament among three random players.
-
----
-
-## Example Output
-```
-X | O | X
-O | X |  
-  |   | O
-Player X wins!
-```
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.

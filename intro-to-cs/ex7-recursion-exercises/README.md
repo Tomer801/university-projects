@@ -1,77 +1,59 @@
-# Intro2CS Exercise 7 – Recursion and Lists
+# Recursive Algorithms Library
 
-Python implementation of recursive algorithms for numbers, strings, lists, and the Tower of Hanoi puzzle.
-
----
-
-## Features
-- **Recursive multiplication**:
-  - `mult(x, y)` – multiplication using repeated addition.
-  - `log_mult(x, y)` – efficient multiplication using divide & conquer (logarithmic recursion).
-- **Number properties**:
-  - `is_even(n)` – check if a number is even using recursion.
-  - `is_power(b, x)` – check if `x` is a power of `b`.
-- **Strings**:
-  - `reverse(s)` – reverse a string recursively.
-- **Classic recursion problem**:
-  - `play_hanoi(Hanoi, n, src, dest, temp)` – solve the Tower of Hanoi.
-- **Digit problems**:
-  - `count_ones(n)` – count number of digit `1` in a number.
-  - `number_of_ones(n)` – count total `1`s between 1 and `n`.
-- **Lists**:
-  - `compare_2d_lists(l1, l2)` – compare two 2D lists (check structure and values).
-  - `magic_list(n)` – create recursive "magical" lists structure.
+A Python library of recursive algorithm implementations covering arithmetic, number theory, string manipulation, list operations, and the classic Tower of Hanoi puzzle.
 
 ---
 
-## Requirements
-- Python 3.8+
-- `ex7_helper.py` module provided by the course (with helpers like `add`, `subtract_1`, `divide_by_2`, `is_odd`, `append_to_end`).
+## Problem Solved
+
+Demonstrate mastery of recursive thinking by solving ten distinct problems purely through recursion — including a divide-and-conquer approach to multiplication that reduces stack depth from O(n) to O(log n).
+
+---
+
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Efficient multiplication | `log_mult(x, y)` uses divide-and-conquer: `log_mult(x, y) = 2 * log_mult(x, y//2)` — O(log n) depth vs. O(n) for naive repeated addition |
+| Power detection | `is_power(b, x)` recursively divides `x` by `b` and checks for exact fit; handles edge cases (b=1, x=1) |
+| Digit-sum accumulation | `number_of_ones(n)` counts all digit `1`s across every integer 1..n via recursive decomposition |
+| 2D list comparison | `compare_2d_lists(l1, l2)` traverses rows and columns recursively without nested loops |
+| Tower of Hanoi | Classic 3-peg solution with O(2ⁿ - 1) move count |
+
+---
+
+## Function Reference
+
+| Function | Description |
+|---|---|
+| `mult(x, y)` | Recursive multiplication via repeated addition — O(n) |
+| `log_mult(x, y)` | Divide-and-conquer multiplication — O(log n) |
+| `is_even(n)` | Parity via recursive decrement |
+| `is_power(b, x)` | Check if x = bᵏ for some integer k ≥ 0 |
+| `reverse(s)` | Recursive string reversal |
+| `play_hanoi(h, n, src, dest, temp)` | Tower of Hanoi solver |
+| `count_ones(n)` | Count digit `1` in the decimal representation of n |
+| `number_of_ones(n)` | Sum of `1`-digits across all integers 1..n |
+| `compare_2d_lists(l1, l2)` | Structural equality check for 2D lists |
+| `magic_list(n)` | Generate nested recursive list structure |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Python 3
+- **Key concepts:** Divide-and-conquer, tail recursion patterns, structural recursion, recursive data structures
 
 ---
 
 ## Usage
-Import and call functions in Python:
 
 ```python
-import ex7
+from ex7 import mult, log_mult, is_power, reverse, number_of_ones
 
-print(ex7.mult(3, 4))          # 12
-print(ex7.is_even(7))          # False
-print(ex7.reverse("abcd"))     # "dcba"
-print(ex7.is_power(2, 8))      # True
-print(ex7.count_ones(101))     # 2
-print(ex7.number_of_ones(15))  # total 1's from 1–15
+print(mult(6, 7))           # 42
+print(log_mult(6, 7))       # 42
+print(is_power(2, 64))      # True
+print(reverse("hello"))     # "olleh"
+print(number_of_ones(20))   # 12
 ```
-
-Tower of Hanoi example:
-```python
-from ex7_helper import Hanoi
-h = Hanoi(3)
-ex7.play_hanoi(h, 3, 0, 2, 1)
-```
-
----
-
-## Key Functions
-- `mult(x, y)`
-- `log_mult(x, y)`
-- `is_even(n)`
-- `is_power(b, x)`
-- `reverse(s)`
-- `play_hanoi(Hanoi, n, src, dest, temp)`
-- `count_ones(n)`
-- `number_of_ones(n)`
-- `compare_2d_lists(l1, l2)`
-- `magic_list(n)`
-
----
-
-## Limitations
-- Requires helper functions from `ex7_helper.py`.
-- Recursive definitions may hit recursion depth limits for very large inputs.
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.

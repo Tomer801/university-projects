@@ -1,76 +1,83 @@
-# Movie Recommendation System (C++) – Intro2CS Assignment
+# Collaborative Filtering Recommendation Engine
 
-Implementation of a **Recommendation System** in C++ that supports movie recommendations using both **content-based filtering** and **collaborative filtering (CF)**.
-
----
-
-## Files
-- **Movie.h / Movie.cpp** – Defines `Movie` class with name & year, comparison operators, hash/equal for use in maps, and output formatting.【221†source】【222†source】
-- **RecommendationSystem.h / RecommendationSystem.cpp** – Core recommendation engine. Stores movies with feature vectors and supports content-based and CF recommendations, as well as predicting ratings.【223†source】【224†source】
-- **RecommendationSystemLoader.h / RecommendationSystemLoader.cpp** – Loads movies from a file and initializes a `RecommendationSystem`. Each line contains movie name, year, and feature values.【216†source】【225†source】
-- **User.h / User.cpp** – Represents a user with name, ratings map, and reference to a `RecommendationSystem`. Provides methods for adding movies, getting recommendations, and predicting ratings.【217†source】【218†source】
-- **UsersLoader.h / UsersLoader.cpp** – Loads users and their ratings from a file, linking them to the `RecommendationSystem`. Handles "NA" ratings gracefully.【219†source】【220†source】
+A C++ movie recommendation system implementing both content-based filtering and item-based collaborative filtering (CF), backed by cosine similarity and KNN rating prediction.
 
 ---
 
-## Features
-- **Add Movie**: insert a new movie with features into the system.【223†source】
-- **Get Movie**: retrieve existing movie by name and year.【223†source】
-- **Recommend by Content**: suggests a movie based on cosine similarity between user profile and unseen movies.【223†source】
-- **Recommend by Collaborative Filtering (CF)**: suggests movies by comparing similarities between movies rated by the user.【223†source】
-- **Predict Movie Score**: predicts the rating a user would give to a movie using top-k similar movies.【223†source】
+## Problem Solved
+
+Given a catalog of movies described by feature vectors and a set of users with partial rating histories, recommend unseen movies and predict missing ratings using two complementary strategies: user-profile similarity and item-to-item similarity.
 
 ---
 
-## Build
-Compile all `.cpp` files with a C++11+ compiler. Example:
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| User-profile construction | Normalise each user's ratings to a zero-mean scale, then compute a weighted average of rated movies' feature vectors |
+| Content-based recommendation | Cosine similarity between user profile vector and each unseen movie's feature vector; recommend argmax |
+| Collaborative filtering | For each unseen movie, predict score using top-k most similar rated movies weighted by cosine similarity |
+| Efficient movie lookup | `Movie` objects define a custom hash (`operator()`) and equality, allowing storage in `std::unordered_map` for O(1) average retrieval |
+| Memory safety | Movies shared across users via `std::shared_ptr<Movie>` (`sp_movie`); no raw owning pointers |
+| Missing ratings | "NA" entries in the user file are silently skipped; only rated movies contribute to the user profile |
+
+---
+
+## Recommendation Algorithms
+
+### Content-Based Filtering
+```
+1. Build user profile P = Σ (normalised_rating_i × feature_vector_i)
+2. For each unseen movie m: score(m) = cosine_similarity(P, feature_vector(m))
+3. Return argmax
+```
+
+### Collaborative Filtering (KNN)
+```
+1. For target movie m, find k most similar rated movies by cosine similarity of feature vectors
+2. Predicted rating = Σ (sim(m, mᵢ) × rating(mᵢ)) / Σ sim(m, mᵢ)
+3. Recommend the unseen movie with highest predicted rating
+```
+
+---
+
+## Class Overview
+
+| Class | Responsibility |
+|---|---|
+| `Movie` | Name + year; custom hash/equality for unordered containers |
+| `RecommendationSystem` | Movie database (feature vectors); implements both recommendation strategies |
+| `User` | Ratings map; delegates recommendation requests to `RecommendationSystem` |
+| `RecommendationSystemLoader` | Parses `<name>-<year> f1 f2 ... fN` movie files |
+| `UsersLoader` | Parses user-ratings files; creates `User` objects linked to the system |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** C++ (C++11)
+- **Key concepts:** Cosine similarity, KNN prediction, content-based and collaborative filtering, `std::shared_ptr`, custom hash functions, file parsing
+
+---
+
+## Build & Run
+
 ```bash
-g++ -std=c++11 -Wall -Wextra -Werror -O2 Movie.cpp User.cpp UsersLoader.cpp RecommendationSystem.cpp RecommendationSystemLoader.cpp -o recommender
+g++ -std=c++11 -Wall -Wextra -O2 \
+    Movie.cpp User.cpp UsersLoader.cpp \
+    RecommendationSystem.cpp RecommendationSystemLoader.cpp \
+    -o recommender
 ```
 
----
-
-## Usage
-
-### Loading Movies
-Provide a file where each line has the format:
+**Movie file format:**
 ```
-<name>-<year> <feature1> <feature2> ... <featureN>
-```
-Example:
-```
-Inception-2010 8.5 9.0 7.5
+Inception-2010 8.5 9.0 7.5 6.0
+Matrix-1999    9.0 8.0 9.5 7.0
 ```
 
-### Loading Users
-Provide a file where the first line lists movies, and subsequent lines list each user with ratings or "NA":
+**User file format (first line = movie list, then name + ratings):**
 ```
-Inception-2010 Matrix-1999 Avatar-2009
-Alice 9 NA 8
-Bob 7 10 NA
+Inception-2010 Matrix-1999
+Alice 9 NA
+Bob   7 10
 ```
-
-### Running Recommendations
-```cpp
-auto rs = RecommendationSystemLoader::create_rs_from_movies("movies.txt");
-auto users = UsersLoader::create_users("users.txt", rs);
-
-User& alice = users[0];
-sp_movie rec1 = alice.get_rs_recommendation_by_content();
-sp_movie rec2 = alice.get_rs_recommendation_by_cf(3);
-double pred = alice.get_rs_prediction_score_for_movie("Matrix", 1999, 3);
-```
-
----
-
-## Example Output
-```
-Recommendation by content: Avatar (2009)
-Recommendation by CF: Inception (2010)
-Predicted score for Matrix (1999): 8.7
-```
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.

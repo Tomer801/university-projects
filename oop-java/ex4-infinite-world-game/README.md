@@ -1,60 +1,64 @@
-# Infinite World Simulation – Java Project
+# Infinite World Simulation — PEPSE
 
-Java implementation of an **Infinite World Simulation**, where entities interact with their environment.  
-The project demonstrates modular design, indicators, and strategy-like components.
-
----
-
-## Files
-- **InfiniteWorld.java** – Main simulation manager. Initializes world state, runs updates, tracks entities.  
-- **EnergyIndicator.java** – Tracks and displays entity energy/health levels.  
-- **ColorSupplier.java** – Supplies colors dynamically (for rendering entities, UI indicators, etc.).  
-- **NameConstant.java** – Defines string constants for naming entities, attributes, or parameters.  
+A Java side-scrolling simulation featuring a procedurally generated infinite world, a physics-driven avatar with an energy system, and modular visual indicators — all wired together through clean OOP abstractions.
 
 ---
 
-## Features
-- Infinite world grid where entities exist and interact.  
-- Energy system – entities consume/restore energy.  
-- Indicators show entity states visually (e.g., health bars, energy bars).  
-- Color abstraction for customizing display.  
-- Modular constants for easier configuration and maintainability.  
+## Problem Solved
+
+Build an extensible infinite world simulation where the world generates terrain on demand as the avatar moves, an energy system governs avatar actions, and visual feedback components update reactively — without tight coupling between simulation, physics, and UI layers.
 
 ---
 
-## Strategies & Design
-The system is built with **strategy-like abstractions**:  
-- `ColorSupplier` acts as a pluggable strategy to determine entity colors dynamically.  
-- Indicators can be extended (e.g., health, stamina, mana).  
-- Simulation logic can be extended by injecting new behaviors into `InfiniteWorld`.  
+## Technical Highlights
 
-This design makes it easy to add new mechanics (e.g., AI-controlled movement, additional indicators) without changing core logic.
+| Challenge | How It Was Addressed |
+|---|---|
+| Procedural infinite terrain | World chunks are generated on the fly as the camera moves; already-visited chunks are cached to avoid regeneration |
+| Energy-constrained avatar | Avatar maintains an energy value (0–100); jumping costs energy, standing still regenerates it; actions are gated on sufficient energy |
+| Reactive energy indicator | `EnergyIndicator` observes the avatar's energy and updates a graphical bar each frame — UI and simulation state are decoupled |
+| Dynamic colour rendering | `ColorSupplier` is a pluggable strategy injected into terrain/flora renderers, allowing visual variety without changing rendering logic |
+| Constants management | All layer IDs, tags, and configuration values live in `NameConstant` — a single source of truth that prevents magic-string bugs |
 
 ---
 
-## Build
-Compile with `javac`:
-```bash
-javac *.java
+## Architecture
+
 ```
+pepse/
+├── PepseGameManager     — world initialisation, camera setup, game loop
+├── world/
+│   ├── Terrain          — procedural ground generation (noise-based height)
+│   ├── Sky / Night      — background layers
+│   ├── trees/           — tree + leaf procedural placement
+│   └── Avatar           — player entity, physics, energy management
+└── util/
+    ├── EnergyIndicator  — reactive energy HUD element
+    └── ColorSupplier    — pluggable colour strategy
+```
+
+---
+
+## Design Patterns
+
+| Pattern | Where Applied |
+|---|---|
+| Strategy | `ColorSupplier` — different colour policies injected into renderers |
+| Observer-like | `EnergyIndicator` polled/notified on energy changes |
+| Factory / procedural generation | Terrain and flora generation driven by deterministic noise functions |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Java (SE)
+- **Framework:** DanoGameLab (course game engine)
+- **Key concepts:** Procedural generation, energy/physics system, strategy pattern, observer pattern, modular game architecture
 
 ---
 
 ## Run
-Run the simulation with:
+
 ```bash
-java InfiniteWorld
+java pepse.PepseGameManager
 ```
-
----
-
-## Example Behavior
-- Entities move across the world grid.  
-- Energy depletes as they move.  
-- `EnergyIndicator` shows remaining energy in real time.  
-- World continues infinitely in all directions (looping or procedural generation).  
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.

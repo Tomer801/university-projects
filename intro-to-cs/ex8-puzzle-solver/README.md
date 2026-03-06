@@ -1,65 +1,57 @@
-# Intro2CS Exercise 8 – Puzzle Solver
+# Constraint Satisfaction Puzzle Solver
 
-Python program that solves logic puzzles defined by constraints on how many "seen" cells appear from specific positions in a grid.  
-The solver uses recursion and backtracking to fill the grid, validate constraints, and count possible solutions.
-
----
-
-## Features
-- **Constraint checking**:
-  - `max_seen_cells(picture, row, col)` – compute maximum visible cells from a position (count `-1` as white).
-  - `min_seen_cells(picture, row, col)` – compute minimum visible cells from a position (count `-1` as black).
-  - `check_constraints(picture, constraints_set)` – verify if constraints are satisfied (`0` = invalid, `1` = fully satisfied, `2` = partially valid).
-- **Puzzle solving**:
-  - `solve_puzzle(constraints_set, n, m)` – return a solved puzzle if one exists.
-  - `helper_solve_puzzle(...)` – recursive backtracking engine.
-- **Counting solutions**:
-  - `how_many_solutions(constraints_set, n, m)` – count how many valid solutions exist for given constraints.
-- **Puzzle generation**:
-  - `generate_puzzle(picture)` – stub for creating a puzzle from a solved grid (currently minimal).
+A Python backtracking solver for a visibility-constraint logic puzzle, supporting both single-solution finding and exhaustive solution counting.
 
 ---
 
-## Requirements
-- Python 3.8+
+## Problem Solved
+
+Given an n×m grid and a set of visibility constraints — each specifying that a cell at `(row, col)` must "see" exactly `k` white cells in its row and column — fill the grid with black (`0`) and white (`-1`) cells such that all constraints are satisfied.
 
 ---
 
-## Usage
-Import and call functions in Python:
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Constraint evaluation on partial grids | `check_constraints()` returns 3 states: `0` (already violated), `1` (fully satisfied), `2` (still partial) — enabling early pruning during backtracking |
+| Upper/lower bound estimation | `max_seen_cells()` counts all undecided + white cells (optimistic upper bound); `min_seen_cells()` counts only confirmed white cells (conservative lower bound) — used together to prune infeasible branches early |
+| Systematic backtracking | `helper_solve_puzzle()` fills cells left-to-right, top-to-bottom; at each step places both `0` and `-1`, recurses, and backtracks if constraints become violated |
+| Solution counting | `how_many_solutions()` explores the full search tree, accumulating a count rather than stopping at the first solution |
+
+---
+
+## Constraint Model
 
 ```python
-import puzzle_solver
-
-constraints = {(0, 0, 1), (1, 1, 2)}  # example constraints
-solution = puzzle_solver.solve_puzzle(constraints, 3, 3)
-print(solution)
-
-num_solutions = puzzle_solver.how_many_solutions(constraints, 3, 3)
-print("Number of solutions:", num_solutions)
+constraints = {(row, col, count), ...}
+# Each tuple means: the cell at (row, col) must see exactly `count` white cells
+# (counting in all 4 cardinal directions until a black cell or grid boundary)
 ```
 
-Constraints are defined as a set of tuples `(row, col, value)` meaning the cell at `(row, col)` must see exactly `value` cells in its row/column directions.
+Grid values:
+- `-1` = white (visible)
+- `0` = black (blocks sight)
 
 ---
 
-## Key Functions
-- `max_seen_cells(picture, row, col)`
-- `min_seen_cells(picture, row, col)`
-- `check_constraints(picture, constraints_set)`
-- `solve_puzzle(constraints_set, n, m)`
-- `helper_solve_puzzle(temp_picture, constraints_set, i, j)`
-- `how_many_solutions(constraints_set, n, m)`
-- `helper_how_many_solutions(...)`
-- `generate_puzzle(picture)`
+## API
+
+```python
+from puzzle_solver import solve_puzzle, how_many_solutions
+
+constraints = {(0, 0, 2), (1, 2, 1)}
+
+# Find one solution (or None if unsolvable)
+solution = solve_puzzle(constraints, n=3, m=3)
+
+# Count all valid solutions
+count = how_many_solutions(constraints, n=3, m=3)
+```
 
 ---
 
-## Limitations
-- `generate_puzzle` is not fully implemented (placeholder).
-- Backtracking can be slow for large grids or complex constraints.
+## Tech Stack & Concepts
 
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.
+- **Language:** Python 3
+- **Key concepts:** Constraint satisfaction, backtracking search, branch-and-bound pruning, partial solution validation

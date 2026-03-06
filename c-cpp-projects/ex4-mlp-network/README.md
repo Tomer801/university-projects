@@ -1,66 +1,66 @@
-# MLP Neural Network (C++) – Intro2CS Assignment
+# Handwritten Digit Classifier — MLP from Scratch
 
-Implementation of a simple feedforward **Multi-Layer Perceptron (MLP)** for digit classification.  
-The network uses 4 fully connected (Dense) layers with ReLU and Softmax activations.
-
----
-
-## Files
-- **Matrix.h / Matrix.cpp** – Matrix class with linear algebra operations (construction, transpose, vectorize, multiplication, RREF, argmax, sum, etc.).【193†source】【194†source】
-- **Activation.h / Activation.cpp** – Implements activation functions: ReLU and Softmax.【197†source】【198†source】
-- **Dense.h / Dense.cpp** – Dense (fully connected) layer: applies weights, bias, and activation function to an input matrix.【192†source】【199†source】
-- **MlpNetwork.h / MlpNetwork.cpp** – Defines the 4-layer MLP, applies layers in sequence, outputs predicted digit and probability.【195†source】【196†source】
+A 4-layer feedforward neural network for MNIST digit recognition implemented entirely in C++, with no machine-learning libraries. All linear algebra is hand-rolled using a custom `Matrix` class.
 
 ---
 
-## Architecture
-- Input: 28×28 grayscale image (flattened to 784 values).【196†source】
-- Layer 1: Dense(128, ReLU)
-- Layer 2: Dense(64, ReLU)
-- Layer 3: Dense(20, ReLU)
-- Layer 4: Dense(10, Softmax) → prediction (digit 0–9)【196†source】
+## Problem Solved
+
+Implement inference for a pre-trained Multi-Layer Perceptron that classifies 28×28 grayscale handwritten digits (0–9), building every component — matrix operations, activation functions, dense layers, and the sequential forward pass — from first principles in C++.
 
 ---
 
-## Build
-Compile with a C++11+ compiler. Example with `g++`:
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Matrix algebra without a library | `Matrix` class implements multiplication (`operator*`), addition (`operator+`), transpose, vectorize, argmax, and scalar operations with full operator overloading |
+| ReLU activation | Element-wise `max(0, x)` via `operator()` on a `Matrix`; preserves dimensions |
+| Softmax activation | Numerically stable: shift by max value before exponentiation, then normalize to sum = 1 |
+| Layer abstraction | `Dense` encapsulates weight matrix, bias vector, and activation; `operator()` performs the full `activation(W*x + b)` forward pass |
+| Digit prediction | `MlpNetwork::operator()` chains all 4 layers and returns a `digit` struct with predicted value and confidence probability |
+
+---
+
+## Network Architecture
+
+```
+Input (28×28 image) → vectorize → [784]
+  Dense(784 → 128, ReLU)
+  Dense(128 →  64, ReLU)
+  Dense( 64 →  20, ReLU)
+  Dense( 20 →  10, Softmax)
+Output: digit ∈ {0..9}, probability ∈ [0,1]
+```
+
+---
+
+## Class Hierarchy
+
+| Class | Responsibility |
+|---|---|
+| `Matrix` | Linear algebra primitives; operator overloading for natural math notation |
+| `Activation` | Stateless functors: `relu(Matrix)`, `softmax(Matrix)` |
+| `Dense` | Fully connected layer: holds `W`, `b`, activation function; applies forward pass |
+| `MlpNetwork` | Sequential container of 4 `Dense` layers; entry point is `operator()(Matrix img)` |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** C++ (C++11)
+- **Build:** `g++ -std=c++11 -Wall -Wextra -Werror -O2`
+- **Key concepts:** Operator overloading, const-correctness, matrix algebra, ReLU/Softmax activations, feedforward inference
+
+---
+
+## Build & Run
+
 ```bash
-g++ -std=c++11 -Wall -Wextra -Werror -O2 Matrix.cpp Dense.cpp Activation.cpp MlpNetwork.cpp -o mlp
+g++ -std=c++11 -Wall -Wextra -Werror -O2 \
+    Matrix.cpp Dense.cpp Activation.cpp MlpNetwork.cpp -o mlp
+
+# Feed a 28x28 image (784 float values) via stdin
+./mlp < image.bin
+# Output: Digit: 7  Probability: 0.9823
 ```
-
----
-
-## Usage
-1. Load trained weights and biases into `Matrix` objects (from binary files).【194†source】
-2. Construct the network:
-```cpp
-Matrix weights[MLP_SIZE], biases[MLP_SIZE];
-// ... load data ...
-MlpNetwork mlp(weights, biases);
-```
-3. Apply the network to an input image:
-```cpp
-Matrix img(28, 28);
-std::cin >> img;      // read raw data into matrix
-digit result = mlp(img.vectorize());
-std::cout << "Digit: " << result.value << " Probability: " << result.probability << std::endl;
-```
-
----
-
-## Example Output
-```
-Digit: 7 Probability: 0.9823
-```
-
----
-
-## Notes
-- `Matrix` operator overloads allow natural math expressions: `weights * input + bias`.【193†source】
-- `relu` replaces negatives with 0; `softmax` exponentiates and normalizes to probabilities.【197†source】
-- `MlpNetwork::operator()` applies all 4 layers and returns the best digit + probability.【195†source】
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.

@@ -1,69 +1,76 @@
-# uthreads – User-Level Threads Library (C++)
+# User-Level Thread Scheduler
 
-User-level threads library for the HUJI OS course. Preemptive scheduling using `SIGVTALRM` and a virtual timer; context switching via `setjmp`/`longjmp`. Provides spawn, block/resume, sleep, terminate, and time/quantum queries.
+A preemptive, round-robin user-space threading library for Linux/POSIX, implementing OS scheduling primitives (virtual timer, signal handler, context save/restore) entirely in user space without kernel threads.
 
-## Build
-Static library (default):
+---
+
+## Problem Solved
+
+Implement a complete threading library — including preemptive scheduling, blocking, sleeping, and accurate quantum accounting — using only POSIX process signals and `setjmp`/`longjmp`, with no kernel-level thread support.
+
+---
+
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Preemptive scheduling without kernel threads | `setitimer(ITIMER_VIRTUAL, quantum_usecs)` fires `SIGVTALRM` periodically; the signal handler saves the current thread's context and switches to the next READY thread |
+| Context save/restore | `sigsetjmp` saves CPU registers and signal mask; `siglongjmp` restores them — the suspended thread resumes exactly where it paused |
+| Per-thread stack isolation | Each spawned thread receives a private heap-allocated stack of `STACK_SIZE` bytes; the initial `PC` is set to the entry point function |
+| SLEEP quantum accounting | Sleeping threads store the target wake-up quantum; the scheduler checks and re-queues them on each quantum transition |
+| `SLEEP_BLOCKED` state | A thread blocked while sleeping enters `SLEEP_BLOCKED`; `uthread_resume()` transitions it back to `SLEEP` rather than `READY`, preserving the remaining sleep duration |
+| Main thread exception | `tid=0` uses the process stack; `uthread_block` and `uthread_sleep` are forbidden on it to prevent deadlock |
+
+---
+
+## Thread State Machine
+
+```
+READY ──(scheduled)──► RUNNING ──(block)──► BLOCKED
+  ▲                        │                    │
+  │         (preempt)      │     (resume)       │
+  └────────────────────────┘◄───────────────────┘
+                           │
+                     (sleep N quanta)
+                           ▼
+                         SLEEP ──(block)──► SLEEP_BLOCKED
+                           │                    │
+                     (wake-up quantum)   (resume → SLEEP)
+                           ▼
+                         READY
+```
+
+---
+
+## API
+
+```cpp
+int uthread_init(int quantum_usecs);           // initialise; main = RUNNING
+int uthread_spawn(thread_entry_point fn);      // create READY thread, return tid
+int uthread_terminate(int tid);               // terminate tid; tid=0 exits process
+int uthread_block(int tid);                   // move tid to BLOCKED
+int uthread_resume(int tid);                  // move BLOCKED → READY
+int uthread_sleep(int num_quantums);          // sleep running thread for N quanta
+int uthread_get_tid();                        // current thread id
+int uthread_get_total_quantums();             // total quantums elapsed since init
+int uthread_get_quantums(int tid);            // quantums thread tid has been RUNNING
+```
+
+All functions return `-1` on error with a message to stderr.
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** C++ (C++11)
+- **Build:** `make` → `libuthreads.a` (static) | `make shared` → `libuthreads.so`
+- **Key concepts:** POSIX signals, `SIGVTALRM`, `sigsetjmp/siglongjmp`, virtual timer, round-robin scheduling, quantum accounting, user-space OS primitives
+
+---
+
+## Build & Link
+
 ```bash
 make
+g++ -std=c++11 -O2 -I. your_program.cpp -L. -luthreads -o your_program
 ```
-Shared library:
-```bash
-make shared
-```
-
-This produces `libuthreads.a` (and optionally `libuthreads.so`).
-
-## Use
-Include the header and link the library:
-```bash
-g++ -std=c++11 -O2 -Wall -Wextra -Werror -I. your_program.cpp -L. -luthreads -o your_program
-```
-
-Minimal example:
-```cpp
-#include "uthreads.h"
-#include <iostream>
-
-void worker() {
-  for (int i = 0; i < 3; ++i) {
-    std::cout << "tid=" << uthread_get_tid() << " q=" << uthread_get_total_quantums() << "\n";
-  }
-  uthread_terminate(uthread_get_tid());
-}
-
-int main() {
-  uthread_init(100000);             // 100ms quantum
-  int tid = uthread_spawn(worker);  // add a ready thread
-  // main keeps running while timer preempts between main and worker
-  for (int i = 0; i < 5; ++i) { /* do work */ }
-  uthread_terminate(0);             // terminate all and exit
-}
-```
-
-## API (summary)
-- `int uthread_init(int quantum_usecs)` – init library; main thread becomes RUNNING; quantum in µs.
-- `int uthread_spawn(thread_entry_point entry_point)` – create thread with its own stack (size `STACK_SIZE`).
-- `int uthread_terminate(int tid)` – terminate `tid`; `tid==0` terminates the process after cleanup.
-- `int uthread_block(int tid)` – block thread `tid` (not allowed for main).
-- `int uthread_resume(int tid)` – move blocked thread to READY (or SLEEP→SLEEP_BLOCKED handling as implemented).
-- `int uthread_sleep(int num_quantums)` – put RUNNING thread to sleep for given quantums (not allowed for main).
-- `int uthread_get_tid()` – current thread id.
-- `int uthread_get_total_quantums()` – total quantums since init (starts at 1 right after init).
-- `int uthread_get_quantums(int tid)` – number of quantums a thread has RUN.
-
-States used internally: `READY, RUNNING, BLOCKED, SLEEP, SLEEP_BLOCKED`.
-
-## Notes
-- Preemption by `SIGVTALRM` + `setitimer(ITIMER_VIRTUAL)`; context via `sigsetjmp/siglongjmp`.
-- Each spawned thread gets a private stack of size `STACK_SIZE`.
-- Main thread (`tid==0`) uses the process stack and cannot be blocked or put to sleep.
-- Time accounting: on each new quantum, `total_quantums` increases; the first quantum after init is counted.
-- Error cases return `-1` as described in the header comments.
-
-## Files
-- `uthreads.h` – public API and constants.
-- `uthreads.cpp` – implementation (scheduler, timer handler, ready queue, sleep logic).
-
-## License
-Educational use.

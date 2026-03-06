@@ -1,56 +1,45 @@
-# Machine Learning – Visualization & Requirements
+# Decision Tree Classifier
 
-This repository specifies dependencies for visualization and machine learning experiments.
-
----
-
-## Requirements
-
-The project uses the following Python libraries (see `requirements.txt`):
-
-- **numpy 2.2.5** – Numerical computing and array operations【382†source】.
-- **matplotlib 3.10.1** – Plotting library for data visualization【382†source】.
-- **seaborn 0.13.2** – Statistical data visualization, built on top of matplotlib【382†source】.
-- **scikit-learn 1.6.1** – Machine learning algorithms, model training, evaluation, preprocessing【382†source】.
+An entropy-based decision tree classifier implemented from scratch in Python, with support for both discrete and continuous features and optional pruning.
 
 ---
 
-## Installation
+## Problem Solved
 
-Install dependencies with:
+Build a decision tree that learns axis-aligned splits by maximising information gain at each node, and evaluate its generalisation performance on held-out data.
+
+---
+
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Split criterion | Information gain = entropy(parent) − weighted average entropy(children); threshold search iterates over sorted unique values for continuous features |
+| Stopping conditions | Recursion halts when node is pure, minimum samples threshold is met, or max depth is reached |
+| Prediction | Traverses tree from root, following split conditions at each internal node until a leaf is reached |
+| Pruning | Post-pruning removes subtrees whose removal improves or maintains validation accuracy |
+
+---
+
+## Key Concepts
+
+- **Entropy:** `H(S) = −Σ p_i · log₂(p_i)`
+- **Information gain:** `IG(S, A) = H(S) − Σ |Sᵥ|/|S| · H(Sᵥ)` for each split value v
+- **Gini impurity (alternative):** `G = 1 − Σ p_i²`
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Python 3
+- **Libraries:** NumPy, scikit-learn (evaluation metrics only)
+- **Key concepts:** Information gain, entropy, recursive tree construction, pruning, classification
+
+---
+
+## Run
+
 ```bash
 pip install -r requirements.txt
+python solution.py
 ```
-
----
-
-## Usage
-
-These libraries support machine learning workflows such as regression, classification, visualization, and exploratory data analysis.  
-
-Example:
-```python
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.linear_model import LinearRegression
-
-# Data
-X = np.array([[1], [2], [3], [4]])
-y = np.array([2, 4, 6, 8])
-
-# Model
-model = LinearRegression().fit(X, y)
-pred = model.predict(X)
-
-# Visualization
-sns.scatterplot(x=X.flatten(), y=y, label="Data")
-plt.plot(X, pred, color="red", label="Prediction")
-plt.legend()
-plt.show()
-```
-
----
-
-## License
-Educational use only.

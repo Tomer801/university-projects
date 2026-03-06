@@ -1,55 +1,53 @@
-# Jack Standard Library – Nand2Tetris Project
+# Jack OS Standard Library
 
-Implementation of the **Jack OS standard library** in the Jack programming language, part of the [Nand2Tetris](https://www.nand2tetris.org) course.  
-These files provide built-in classes that support high-level Jack programs, mapping directly to VM/Hack platform functionality.
-
----
-
-## Files
-- **Math.jack** – Mathematical functions: `abs`, `multiply`, `divide`, `sqrt`, random number generation.  
-- **String.jack** – String abstraction: constructors, length, char access, append, erase, int-to-string conversion.  
-- **Array.jack** – Array abstraction: heap allocation & deallocation of arrays.  
-- **Memory.jack** – Memory access primitives: `peek`, `poke`, allocation and deallocation.  
-- **Screen.jack** – Graphics primitives: draw pixels, rectangles, lines, clear screen.  
-- **Output.jack** – Text output functions: print characters, strings, integers; cursor management.  
-- **Keyboard.jack** – Input functions: key press codes, read character, read line, read integer.  
-- **Sys.jack** – System bootstrap: program entry (`init`), halt, wait/delay.  
-- **AUTHORS** – Project authorship information.
+A complete operating-system standard library written in the Jack programming language, providing math, memory management, string manipulation, I/O, and graphics services to all Jack programs running on the Hack platform.
 
 ---
 
-## Features
-- Provides a **standard runtime library** for Jack programs.  
-- Each class abstracts VM instructions into high-level APIs.  
-- Enables Jack programs to use I/O, math, strings, memory, graphics, and system services.
+## Problem Solved
+
+Implement the OS layer that bridges high-level Jack programs and the raw Hack hardware: provide arithmetic operations the CPU lacks (multiply, divide, sqrt), a heap memory allocator, character/string/integer I/O, bitmap screen drawing, and system bootstrap/halt.
 
 ---
 
-## Build & Run
-The `.jack` files are compiled using the Jack compiler into `.vm` files:  
+## Library Classes
+
+| Class | Responsibility | Key Implementation Notes |
+|---|---|---|
+| `Math.jack` | `abs`, `multiply`, `divide`, `sqrt`, `max`, `min` | Multiply via shift-and-add (O(log n)); sqrt via binary search |
+| `String.jack` | Construction, `length`, `charAt`, `appendChar`, `eraseLastChar`, `intValue`, `setInt` | Internal char array with length tracking; integer parsing via digit iteration |
+| `Array.jack` | `new(size)`, `dispose()` | Thin wrapper over `Memory.alloc` / `Memory.deAlloc` |
+| `Memory.jack` | `peek(addr)`, `poke(addr, val)`, `alloc(size)`, `deAlloc(object)` | Free-list heap allocator using a linked block structure in RAM |
+| `Screen.jack` | `clearScreen`, `drawPixel`, `drawLine`, `drawRectangle`, `drawCircle` | Bitwise word-level access to the screen memory map (0x4000–0x5FFF); Bresenham-style line algorithm |
+| `Output.jack` | `moveCursor`, `printChar`, `printString`, `printInt`, `println` | Fixed-width bitmap font rendered by writing bit patterns to screen memory |
+| `Keyboard.jack` | `keyPressed`, `readChar`, `readLine`, `readInt` | Polls the keyboard memory-mapped register (0x6000) for key codes |
+| `Sys.jack` | `init`, `halt`, `error`, `wait` | Bootstrap: calls `Math.init`, `Memory.init`, `Screen.init`, `Output.init`, `Keyboard.init`, then `Main.main` |
+
+---
+
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Multiplication without a MUL instruction | `Math.multiply(x, y)` uses repeated shift-and-add: check each bit of y, accumulate `x << bit` — O(16) iterations for 16-bit integers |
+| Square root without hardware support | Binary search over the range [0, 2^(n/2)]; uses only multiply and compare |
+| Heap allocator | `Memory.alloc` maintains a free list of variable-size blocks; `deAlloc` coalesces adjacent free blocks to reduce fragmentation |
+| Screen drawing | `Screen.drawLine` uses Bresenham-derived incremental algorithm; `drawCircle` uses `sqrt` and horizontal line segments |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Jack (high-level language for the Hack platform)
+- **Key concepts:** OS primitives, memory management (free-list allocator), bitmap graphics, hardware memory-mapped I/O, arithmetic algorithms
+
+---
+
+## Compile & Use
 
 ```bash
-JackCompiler Math.jack
+# Compile all .jack files using the Jack compiler from ex10-11
+python3 ../ex10-11-jack-compiler/JackCompiler.py .
 ```
 
-The generated `.vm` files are then translated to Hack assembly using the VM Translator, and finally executed on the Hack platform (CPU emulator).
-
----
-
-## Example (String.jack)
-```jack
-let s = String.new(10);
-do s.appendChar('H');
-do s.appendChar('i');
-do Output.printString(s);
-```
-
-Output:
-```
-Hi
-```
-
----
-
-## License
-This project follows the [CC BY-NC-SA 3.0 License](https://creativecommons.org/licenses/by-nc-sa/3.0/) as required by the Nand2Tetris course materials.
+The resulting `.vm` files can then be loaded into the Hack VM emulator.

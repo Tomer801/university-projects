@@ -1,86 +1,81 @@
-# Markov Chain Projects – Intro2CS Assignment
+# Stochastic Text Generator — Markov Chain Engine
 
-C implementations using Markov Chains for text generation ("tweets") and for simulating the game *Snakes and Ladders*.
-
----
-
-## Files
-- **markov_chain.h / markov_chain.c** – generic Markov Chain data structure and utilities (add to database, frequency lists, random walk, free).【176†files_uploaded_in_conversation】【177†files_uploaded_in_conversation】
-- **tweets_generator.c** – builds a Markov Chain from an input text file and generates random "tweets".【175†files_uploaded_in_conversation】
-- **snakes_and_ladders.c** – builds a Markov Chain model of the Snakes and Ladders board game and generates random walks from start to finish.【174†files_uploaded_in_conversation】
-- **makefile** – build automation.
+A generic Markov chain library in C, driving two applications: a probabilistic tweet generator and a Snakes & Ladders board-game simulator.
 
 ---
 
-## Build
-Compile with a C11 compiler. Example:
-```bash
-gcc -std=c11 -Wall -Wextra -Werror -O2 tweets_generator.c markov_chain.c -o tweets
-gcc -std=c11 -Wall -Wextra -Werror -O2 snakes_and_ladders.c markov_chain.c -o snakes
+## Problem Solved
+
+Build a **reusable, type-agnostic Markov chain engine** capable of modelling any sequential stochastic process. Demonstrate its generality by powering two completely different applications — natural-language generation and board-game simulation — without modifying the core library.
+
+---
+
+## Technical Highlights
+
+| Challenge | How It Was Addressed |
+|---|---|
+| Type-generic data structure in C (no templates) | Node payload is `void*`; behaviour injected via function-pointer struct (`copy`, `free`, `compare`, `print`, `is_last`) |
+| Frequency-weighted random walks | Each node maintains a frequency list; next state sampled proportionally to transition counts |
+| Sentence boundary detection | Tokens ending with `.` are marked as terminal — random walk never continues past them |
+| Memory safety | Dedicated `free_database()` traverses the linked list and releases every node and its frequency list |
+
+---
+
+## Architecture
+
+```
+markov_chain.h / markov_chain.c   — Generic engine (LinkedList of MarkovNodes, frequency lists, random walk)
+tweets_generator.c                — Application 1: corpus → word n-gram chain → random tweets
+snakes_and_ladders.c              — Application 2: 100-cell board → Markov transitions → game simulation
 ```
 
-Or simply run:
-```bash
-make
+**Core data structures:**
+```c
+typedef struct MarkovNode {
+    void            *data;
+    MarkovNodeData  *frequency_list; // weighted edges to successor states
+    int              freq_list_size;
+} MarkovNode;
+
+typedef struct MarkovChain {
+    LinkedList *database;
+    // -- function pointers for generic behaviour --
+    void (*print_func)(void *);
+    int  (*comp_func)(void *, void *);
+    void (*free_data)(void *);
+    void *(*copy_func)(void *);
+    bool (*is_last)(void *);
+} MarkovChain;
 ```
 
 ---
 
-## Usage
+## Applications
 
 ### Tweets Generator
-```
-./tweets <seed> <num_tweets> <input_file> [words_to_read]
-```
-- `<seed>`: random seed (integer).
-- `<num_tweets>`: number of random tweets to generate.
-- `<input_file>`: path to a text file corpus.
-- `[words_to_read]`: optional max number of words to read from the file.
+Reads a text corpus, builds a word-level Markov chain with transition probabilities, and generates random tweets (≤ 20 words, ending at `.`).
 
-Example:
 ```bash
+gcc -std=c11 -Wall -Wextra -O2 tweets_generator.c markov_chain.c -o tweets
 ./tweets 42 5 corpus.txt 1000
+# Tweet 1: the cat sat on the mat .
 ```
 
-Tweets are limited to 20 words max.
+### Snakes & Ladders Simulator
+Models a 100-cell board where dice rolls are uniform random transitions and snakes/ladders are deterministic jumps. Generates and prints random full-game walks.
 
-### Snakes and Ladders
+```bash
+gcc -std=c11 -Wall -Wextra -O2 snakes_and_ladders.c markov_chain.c -o snakes
+./snakes 42 3
+# Random Walk 1: [1] -> [6] -> [ladder-to-30] -> ... -> [100]
 ```
-./snakes <seed> <num_walks>
-```
-- `<seed>`: random seed (integer).
-- `<num_walks>`: number of random walks to simulate.
 
-Each walk prints the path from cell 1 until reaching cell 100. Ladders and snakes are modeled as deterministic transitions.【174†files_uploaded_in_conversation】
+Or build both with `make`.
 
 ---
 
-## Implementation Notes
-- The Markov Chain stores generic data with function pointers for copy, free, compare, print, and "is last" checks.【177†files_uploaded_in_conversation】
-- `tweets_generator.c`:
-  - Reads file, tokenizes words, builds chain with word frequencies.
-  - Sentence ends when a token ends with `.`.【175†files_uploaded_in_conversation】
-- `snakes_and_ladders.c`:
-  - Board of 100 cells, transitions for 20 snakes/ladders hardcoded.
-  - Dice rolls (1–6) define other transitions.
-  - Walk ends when reaching cell 100.【174†files_uploaded_in_conversation】
+## Tech Stack & Concepts
 
----
-
-## Example Outputs
-
-**Tweets**:
-```
-Tweet 1: the cat sat on the mat .
-Tweet 2: hello world .
-```
-
-**Snakes and Ladders**:
-```
-Random Walk 1: [1] -> [2] -> [8] -ladder to-> [30] -> ... -> [100]
-```
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.
+- **Language:** C (C11)
+- **Build:** Make + gcc
+- **Key concepts:** Generic programming via function pointers, stochastic modelling, linked list, frequency-weighted sampling, memory management

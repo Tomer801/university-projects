@@ -1,76 +1,82 @@
-# ASCII Art Generator – Java Project
+# ASCII Art Generator
 
-Java implementation of an **ASCII Art Generator**, which converts images into ASCII text representations.  
-The project supports multiple algorithms, commands, and a shell interface.
-
----
-
-## Files
-- **AsciiArtAlgorithm.java** – Interface/abstract base for ASCII art algorithms (defines how images are converted).  
-- **AsciiArtConstant.java** – Constants used for ASCII generation (characters, scaling factors, etc.).  
-- **Image.java** – Represents an input image (pixel grid, brightness extraction).  
-- **ImagePrepration.java** – Prepares images for ASCII conversion (resizing, grayscale normalization).  
-- **Command.java** – Represents commands available in the interactive shell.  
-- **Shell.java** – Command-line shell for running ASCII art operations interactively.  
-- **IncorrectFormatException.java / UserInputException.java** – Custom exceptions for invalid user input or file format errors.  
-- **AbsRound.java** – Utility/helper for rounding operations in image processing.  
+A Java image-to-ASCII pipeline that converts bitmap images into character art, with an interactive shell for adjusting charset, resolution, and output target (console or HTML).
 
 ---
 
-## Features
-- Load an image and convert it into ASCII art.  
-- Multiple conversion algorithms supported (different character sets, brightness scaling).  
-- Interactive shell with commands for choosing algorithm, loading/saving images, adjusting parameters.  
-- Error handling with descriptive exceptions for invalid inputs.  
-- Modular design allows adding new algorithms by implementing `AsciiArtAlgorithm`.  
+## Problem Solved
+
+Convert a raster image to ASCII art by dividing it into sub-images, computing a brightness value for each region, and mapping that brightness to the most visually similar character from a configurable set — with pluggable output renderers and rounding strategies.
 
 ---
 
-## Usage
+## Technical Highlights
 
-### Build
-Compile with `javac`:
+| Challenge | How It Was Addressed |
+|---|---|
+| Sub-image brightness computation | `ImagePrepration` pads the image to the nearest power-of-two dimensions, then divides it into equal-size sub-regions; `CharConverter` computes the average greyscale brightness of each region normalised to [0,1] |
+| Character brightness normalisation | `SubImgCharMatcher` pre-computes the brightness of each character in the charset and normalises all values to [0,1]; brightness-to-char mapping is a simple nearest-neighbour lookup |
+| Pluggable rounding strategies | `RoundingMethod` interface with `UpRound` and `DownRound` implementations lets callers choose how brightness ties are broken |
+| Multiple output targets | `AsciiOutput` interface with `ConsoleAsciiOutput` (prints to stdout) and `HtmlAsciiOutput` (writes a styled HTML file) |
+| Interactive shell | `Shell` parses user commands (`add`, `remove`, `res`, `image`, `output`, `asciiArt`) with validation and descriptive error messages via custom exceptions |
+
+---
+
+## Architecture
+
+```
+ascii_art/
+├── Shell                  — interactive REPL
+├── AsciiArtAlgorithm      — conversion orchestration
+└── AsciiArtConstant       — shared constants
+
+image/
+├── Image                  — pixel grid and brightness extraction
+└── ImagePrepration        — padding, sub-image division
+
+image_char_matching/
+├── SubImgCharMatcher      — charset brightness index + nearest-char lookup
+├── CharConverter          — character → brightness value
+└── RoundingMethod / UpRound / DownRound — pluggable rounding
+
+ascii_output/
+├── AsciiOutput            — output interface
+├── ConsoleAsciiOutput     — stdout renderer
+└── HtmlAsciiOutput        — HTML file renderer
+```
+
+---
+
+## Design Patterns
+
+| Pattern | Where Applied |
+|---|---|
+| Strategy | `RoundingMethod` interface — `UpRound`/`DownRound` injected at runtime |
+| Template Method | `AsciiArtAlgorithm` defines the conversion flow; subclasses override specific steps |
+| Factory | Output target selected by string name in `Shell` |
+
+---
+
+## Tech Stack & Concepts
+
+- **Language:** Java (SE)
+- **Key concepts:** Image sub-sampling, brightness normalisation, strategy pattern, template method, custom exceptions, interactive CLI design
+
+---
+
+## Run
+
 ```bash
-javac *.java
+java ascii_art.Shell
 ```
 
-### Run
-Run the shell:
-```bash
-java Shell
+Shell commands:
 ```
-
-Inside the shell, commands may include:
+image <path>        — load image
+chars               — show current charset
+add <char|range|all>
+remove <char|range|all>
+res <up|down>       — increase/decrease resolution
+output <console|html>
+asciiArt            — render
 ```
-load image.png
-set algorithm simple
-render
-save output.txt
-```
-
----
-
-## Example Output
-Input (image of a cat):
-
-```
- /\_/\ 
-( o.o )
- > ^ <
-```
-
-ASCII output rendered with chosen character set.
-
----
-
-## Strategies
-The system uses the **strategy pattern** for ASCII conversion algorithms:  
-- Each algorithm implements `AsciiArtAlgorithm`.  
-- User can switch algorithms dynamically in the shell.  
-- Example: simple brightness mapping vs. advanced dithering.  
-- Makes it easy to extend the system with new ASCII art strategies.  
-
----
-
-## License
-Educational use. Add a license if you plan to publish broadly.
